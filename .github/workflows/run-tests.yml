@@ -11,6 +11,11 @@ on:
         options:
           - all
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,23 +35,38 @@ jobs:
         run: mvn clean test
         continue-on-error: true
       
+      - name: Install Allure CLI
+        if: always()
+        run: |
+          wget https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          tar -zxvf allure-2.25.0.tgz
+          sudo mv allure-2.25.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+      
       - name: Generate Allure Report
         if: always()
-        run: mvn allure:report
+        run: allure generate target/allure-results -o allure-report --clean
         continue-on-error: true
+      
+      - name: Setup Pages
+        if: always()
+        uses: actions/configure-pages@v4
+      
+      - name: Upload Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: allure-report/
+      
+      - name: Deploy to GitHub Pages
+        if: always()
+        id: deployment
+        uses: actions/deploy-pages@v4
       
       - name: Upload Allure Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: target/site/allure-maven-plugin/
-          retention-days: 30
-      
-      - name: Upload Allure Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results
-          path: target/allure-results/
+          path: allure-report/
           retention-days: 30
