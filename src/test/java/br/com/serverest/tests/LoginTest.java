@@ -12,8 +12,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import static org.hamcrest.Matchers.*;
 
 @Epic("API ServeRest")
@@ -34,25 +32,17 @@ public class LoginTest extends BaseTest {
     @Severity(SeverityLevel.BLOCKER)
     @Story("Login - Casos de Sucesso")
     public void testLoginComSucesso() {
-        Login login = DataFactory.criarLoginValido(usuarioCriado);
-        
-        anexarDadosDeTeste("Credenciais de Login", login);
-        
-        Response response = loginService.realizarLogin(login);
-        
-        anexarResponse(response);
-        
-        // Usando método helper para extrair token limpo
+        Login login = DataFactory.criarLoginValido(usuarioCriado);        
+        anexarDadosDeTeste("Credenciais de Login", login);        
+        Response response = loginService.realizarLogin(login);        
+        anexarResponse(response);        
         String token = loginService.extrairTokenLimpo(response);
-        anexarTexto("Token JWT", token);
-        
+        anexarTexto("Token JWT", token);        
         response.then()
                 .statusCode(200)
                 .body("message", equalTo("Login realizado com sucesso"))
                 .body("authorization", notNullValue())
-                .body("authorization", startsWith("Bearer "));
-        
-        // Usando método helper para validar sucesso
+                .body("authorization", startsWith("Bearer "));        
         anexarLog("Login realizado com sucesso: " + loginService.loginFoiSucesso(response));
     }
 
@@ -62,12 +52,9 @@ public class LoginTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Story("Login - Casos de Erro")
     public void testLoginComEmailInvalido() {
-        // Usando método helper sobrecarga com email e senha
-        Response response = loginService.realizarLogin("email.invalido@teste.com", usuarioCriado.getPassword());
-        
+        Response response = loginService.realizarLogin("email.invalido@teste.com", usuarioCriado.getPassword());        
         anexarDadosDeTeste("Email Inválido", "email.invalido@teste.com");
-        anexarResponse(response);
-        
+        anexarResponse(response);        
         validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 
@@ -77,12 +64,9 @@ public class LoginTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Story("Login - Casos de Erro")
     public void testLoginComSenhaInvalida() {
-        // Usando método helper sobrecarga com email e senha
-        Response response = loginService.realizarLogin(usuarioCriado.getEmail(), "senhaerrada123");
-        
+        Response response = loginService.realizarLogin(usuarioCriado.getEmail(), "senhaerrada123");        
         anexarDadosDeTeste("Senha Inválida", "senhaerrada123");
-        anexarResponse(response);
-        
+        anexarResponse(response);        
         validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 
@@ -101,12 +85,9 @@ public class LoginTest extends BaseTest {
                 .password(usuarioCriado.getPassword())
                 .build();
         
-        anexarDadosDeTeste("Login com Email Inválido: " + email, login);
-        
-        Response response = loginService.realizarLogin(login);
-        
-        anexarResponse(response);
-        
+        anexarDadosDeTeste("Login com Email Inválido: " + email, login);        
+        Response response = loginService.realizarLogin(login);    
+        anexarResponse(response);        
         validarRespostaErro400(response, "email", mensagemEsperada);
     }
 
@@ -120,18 +101,14 @@ public class LoginTest extends BaseTest {
         "password, password é obrigatório"
     })
     public void testLoginCamposObrigatorios(String campo, String mensagem) {
-        Response response;
-        
-        // Usando métodos helper específicos do LoginService
+        Response response;        
         if (campo.equals("email")) {
             response = loginService.realizarLoginSemEmail(usuarioCriado.getPassword());
         } else {
             response = loginService.realizarLoginSemSenha(usuarioCriado.getEmail());
-        }
-        
+        }        
         anexarDadosDeTeste("Login sem campo: " + campo, "Campo " + campo + " omitido");
-        anexarResponse(response);
-        
+        anexarResponse(response);        
         validarRespostaErro400(response, campo, mensagem);
     }
 
@@ -145,8 +122,7 @@ public class LoginTest extends BaseTest {
         "password, password não pode ficar em branco"
     })
     public void testLoginCamposVazios(String campo, String mensagem) {
-        Login login;
-        
+        Login login;        
         if (campo.equals("email")) {
             login = Login.builder()
                     .email("")
@@ -157,14 +133,10 @@ public class LoginTest extends BaseTest {
                     .email(usuarioCriado.getEmail())
                     .password("")
                     .build();
-        }
-        
-        anexarDadosDeTeste("Login com campo vazio: " + campo, login);
-        
-        Response response = loginService.realizarLogin(login);
-        
-        anexarResponse(response);
-        
+        }        
+        anexarDadosDeTeste("Login com campo vazio: " + campo, login);        
+        Response response = loginService.realizarLogin(login);        
+        anexarResponse(response);        
         validarRespostaErro400(response, campo, mensagem);
     }
 
@@ -174,12 +146,9 @@ public class LoginTest extends BaseTest {
     @Severity(SeverityLevel.NORMAL)
     @Story("Login - Validações de Campo")
     public void testLoginComCamposVazios() {
-        // Usando método helper do LoginService
-        Response response = loginService.realizarLoginComCamposVazios();
-        
+        Response response = loginService.realizarLoginComCamposVazios();        
         anexarDadosDeTeste("Login com Campos Vazios", "Email e senha vazios");
-        anexarResponse(response);
-        
+        anexarResponse(response);        
         response.then()
                 .statusCode(400)
                 .body("email", equalTo("email não pode ficar em branco"))
@@ -195,14 +164,10 @@ public class LoginTest extends BaseTest {
         Login login = Login.builder()
                 .email(usuarioCriado.getEmail())
                 .password("  " + usuarioCriado.getPassword() + "  ")
-                .build();
-        
-        anexarDadosDeTeste("Login com Espaços na Senha", login);
-        
-        Response response = loginService.realizarLogin(login);
-        
-        anexarResponse(response);
-        
+                .build();        
+        anexarDadosDeTeste("Login com Espaços na Senha", login);        
+        Response response = loginService.realizarLogin(login);        
+        anexarResponse(response);        
         validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 }

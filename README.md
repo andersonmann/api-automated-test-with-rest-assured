@@ -85,7 +85,6 @@ mvn clean test
 ```bash
 mvn test -Dtest=UsuariosTest
 mvn test -Dtest=LoginTest
-mvn test -Dtest=ServiceObjectPatternTest
 ```
 
 ### Executar um teste específico:
@@ -95,8 +94,7 @@ mvn test -Dtest=UsuariosTest#testCadastrarUsuario
 
 ### Gerar relatório Allure:
 ```bash
-mvn clean test
-allure serve target/allure-results
+mvn allure:serve
 ```
 
 ## 📊 Cobertura de Testes
@@ -105,10 +103,8 @@ allure serve target/allure-results
 |----------------|--------|-----------|
 | **UsuariosTest** | 44 | CRUD, validações, filtros, segurança |
 | **LoginTest** | 11 | Autenticação, validações de campos |
-| **ContratoTest** | 34 | Validação de JSON Schema |
-| **SecurityTest** | 12 | Autenticação, autorização, SQL Injection, XSS |
-| **ServiceObjectPatternTest** | 7 | Demonstração do padrão implementado |
-| **TOTAL** | **108** | **100% de sucesso** |
+| **ContratoTest** | 28 | Validação de JSON Schema |
+| **SecurityTest** | 14 | Autenticação, autorização, SQL Injection, XSS |
 
 ## 📝 Endpoints Testados
 

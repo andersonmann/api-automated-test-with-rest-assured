@@ -25,27 +25,16 @@ public class SecurityTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Story("Validação de Token JWT")
     public void testValidarFormatoTokenJWT() {
-        // Criar usuário
         Usuario usuario = criarUsuarioERetornarObjeto(true);
-
-        // Realizar login
         Login login = DataFactory.criarLoginValido(usuario);
         Response response = loginService.realizarLogin(login);
-
         String token = response.jsonPath().getString("authorization");
-
         response.then()
                 .statusCode(200)
-                // Validar que o token começa com "Bearer "
                 .body("authorization", startsWith("Bearer "))
-                // Validar formato JWT (Bearer + 3 partes separadas por ponto)
                 .body("authorization", matchesPattern("^Bearer [A-Za-z0-9\\-_]+\\.[A-Za-z0-9\\-_]+\\.[A-Za-z0-9\\-_]+$"));
-
-        // Validar que o token tem 3 partes (header.payload.signature)
         String tokenSemBearer = token.replace("Bearer ", "");
-        String[] partes = tokenSemBearer.split("\\.");
-        
-        // Validar estrutura do JWT: deve ter exatamente 3 partes
+        String[] partes = tokenSemBearer.split("\\.");        
         assert partes.length == 3 : "Token JWT deve ter 3 partes (header.payload.signature)";
     }
 
@@ -56,9 +45,6 @@ public class SecurityTest extends BaseTest {
                 .header("Authorization", "Bearer tokeninvalido123")
                 .when()
                 .get("/usuarios");
-
-        // A API ServeRest permite listar usuários sem autenticação,
-        // mas se enviarmos um token inválido, ele deve ser ignorado ou rejeitado
         response.then()
                 .statusCode(anyOf(equalTo(200), equalTo(401)));
     }
@@ -70,8 +56,6 @@ public class SecurityTest extends BaseTest {
                 .header("Authorization", "InvalidTokenFormat")
                 .when()
                 .get("/usuarios");
-
-        // Token sem "Bearer " ou com formato incorreto
         response.then()
                 .statusCode(anyOf(equalTo(200), equalTo(401), equalTo(400)));
     }
@@ -82,8 +66,6 @@ public class SecurityTest extends BaseTest {
         Response response = given()
                 .when()
                 .get("/usuarios");
-
-        // Endpoint público - deve permitir acesso sem token
         response.then()
                 .statusCode(200)
                 .body("usuarios", notNullValue());
@@ -92,24 +74,18 @@ public class SecurityTest extends BaseTest {
     @Test
     @DisplayName("Deve realizar login com senha contendo caracteres especiais")
     public void testLoginComSenhaCaracteresEspeciais() {
-        // Criar usuário com senha contendo caracteres especiais
         Usuario usuario = Usuario.builder()
                 .nome(DataFactory.gerarNomeAleatorio())
                 .email(DataFactory.gerarEmailAleatorio())
                 .password("Senh@123!#$%&*()_+-=[]{}|;:,.<>?")
                 .administrador("true")
                 .build();
-
         criarUsuarioCustomizadoERetornarId(usuario);
-
-        // Realizar login com a senha especial
         Login login = Login.builder()
                 .email(usuario.getEmail())
                 .password(usuario.getPassword())
                 .build();
-
         Response response = loginService.realizarLogin(login);
-
         response.then()
                 .statusCode(200)
                 .body("message", equalTo("Login realizado com sucesso"))
@@ -120,31 +96,20 @@ public class SecurityTest extends BaseTest {
     @Test
     @DisplayName("Validar que token é único para cada login")
     public void testTokenUnicoParaCadaLogin() {
-        // Criar usuário
         Usuario usuario = criarUsuarioERetornarObjeto(true);
-
         Login login = DataFactory.criarLoginValido(usuario);
-
-        // Primeiro login
         Response response1 = loginService.realizarLogin(login);
         String token1 = response1.jsonPath().getString("authorization");
-
-        // Aguardar um momento
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        // Segundo login com mesmo usuário
         Response response2 = loginService.realizarLogin(login);
         String token2 = response2.jsonPath().getString("authorization");
-
-        // Os tokens podem ser iguais ou diferentes dependendo da implementação
-        // Apenas validar que ambos foram gerados com sucesso
         response1.then().statusCode(200);
-        response2.then().statusCode(200);
-        
+        response2.then().statusCode(200);        
         assert token1 != null && !token1.isEmpty() : "Token 1 não deve ser nulo ou vazio";
         assert token2 != null && !token2.isEmpty() : "Token 2 não deve ser nulo ou vazio";
     }
@@ -156,8 +121,6 @@ public class SecurityTest extends BaseTest {
                 .header("Authorization", "  Bearer   tokencomespaco  ")
                 .when()
                 .get("/usuarios");
-
-        // Token com espaços extras pode ser rejeitado ou aceito após trim
         response.then()
                 .statusCode(anyOf(equalTo(200), equalTo(401), equalTo(400)));
     }
@@ -169,8 +132,6 @@ public class SecurityTest extends BaseTest {
                 .header("Authorization", "Bearer token1, Bearer token2")
                 .when()
                 .get("/usuarios");
-
-        // Múltiplos tokens devem ser rejeitados
         response.then()
                 .statusCode(anyOf(equalTo(200), equalTo(401), equalTo(400)));
     }
@@ -178,26 +139,16 @@ public class SecurityTest extends BaseTest {
     @Test
     @DisplayName("Validar estrutura do payload do token JWT")
     public void testValidarPayloadToken() {
-        // Criar usuário
         Usuario usuario = criarUsuarioERetornarObjeto(true);
-
-        // Realizar login
         Login login = DataFactory.criarLoginValido(usuario);
         Response response = loginService.realizarLogin(login);
-
         String token = response.jsonPath().getString("authorization");
-        String tokenSemBearer = token.replace("Bearer ", "");
-        
-        // Separar as partes do JWT
-        String[] partes = tokenSemBearer.split("\\.");
-        
-        // Validar que cada parte não está vazia
+        String tokenSemBearer = token.replace("Bearer ", "");        
+        String[] partes = tokenSemBearer.split("\\.");        
         assert partes.length == 3 : "Token deve ter 3 partes";
         assert !partes[0].isEmpty() : "Header do token não deve estar vazio";
         assert !partes[1].isEmpty() : "Payload do token não deve estar vazio";
-        assert !partes[2].isEmpty() : "Signature do token não deve estar vazia";
-        
-        // Validar tamanho mínimo das partes
+        assert !partes[2].isEmpty() : "Signature do token não deve estar vazia";        
         assert partes[0].length() > 10 : "Header do token muito curto";
         assert partes[1].length() > 10 : "Payload do token muito curto";
         assert partes[2].length() > 10 : "Signature do token muito curta";
@@ -210,8 +161,6 @@ public class SecurityTest extends BaseTest {
                 .header("Authorization", "")
                 .when()
                 .get("/usuarios");
-
-        // Token vazio deve ser ignorado ou rejeitado
         response.then()
                 .statusCode(anyOf(equalTo(200), equalTo(401), equalTo(400)));
     }
@@ -219,24 +168,18 @@ public class SecurityTest extends BaseTest {
     @Test
     @DisplayName("Deve realizar login com senha contendo apenas números")
     public void testLoginComSenhaApenasNumeros() {
-        // Criar usuário com senha numérica
         Usuario usuario = Usuario.builder()
                 .nome(DataFactory.gerarNomeAleatorio())
                 .email(DataFactory.gerarEmailAleatorio())
                 .password("123456789")
                 .administrador("false")
                 .build();
-
         criarUsuarioCustomizadoERetornarId(usuario);
-
-        // Realizar login
         Login login = Login.builder()
                 .email(usuario.getEmail())
                 .password(usuario.getPassword())
                 .build();
-
         Response response = loginService.realizarLogin(login);
-
         response.then()
                 .statusCode(200)
                 .body("message", equalTo("Login realizado com sucesso"))
@@ -246,29 +189,22 @@ public class SecurityTest extends BaseTest {
     @Test
     @DisplayName("Deve realizar login com senha muito longa")
     public void testLoginComSenhaMuitoLonga() {
-        // Criar senha muito longa (100 caracteres)
         StringBuilder senhaLonga = new StringBuilder();
         for (int i = 0; i < 100; i++) {
             senhaLonga.append("a");
         }
-
         Usuario usuario = Usuario.builder()
                 .nome(DataFactory.gerarNomeAleatorio())
                 .email(DataFactory.gerarEmailAleatorio())
                 .password(senhaLonga.toString())
                 .administrador("false")
                 .build();
-
         criarUsuarioCustomizadoERetornarId(usuario);
-
-        // Realizar login
         Login login = Login.builder()
                 .email(usuario.getEmail())
                 .password(usuario.getPassword())
                 .build();
-
         Response response = loginService.realizarLogin(login);
-
         response.then()
                 .statusCode(200)
                 .body("message", equalTo("Login realizado com sucesso"))
