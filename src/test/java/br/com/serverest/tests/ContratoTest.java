@@ -6,6 +6,7 @@ import br.com.serverest.model.Usuario;
 import br.com.serverest.service.LoginService;
 import br.com.serverest.service.UsuarioService;
 import br.com.serverest.utils.DataFactory;
+import io.qameta.allure.*;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.*;
 
+@Epic("API ServeRest")
+@Feature("Validação de Contratos")
 public class ContratoTest extends BaseTest {
 
     private final UsuarioService usuarioService = new UsuarioService();
@@ -28,6 +31,9 @@ public class ContratoTest extends BaseTest {
 
     @Test
     @DisplayName("Validar schema JSON da resposta de listagem de usuários")
+    @Description("Valida que o schema JSON da resposta de listagem está correto")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Validação de Schema")
     public void testValidarSchemaListagemUsuarios() {
         Response response = usuarioService.listarUsuarios();
 

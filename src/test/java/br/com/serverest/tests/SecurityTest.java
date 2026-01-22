@@ -4,36 +4,29 @@ import br.com.serverest.config.BaseTest;
 import br.com.serverest.model.Login;
 import br.com.serverest.model.Usuario;
 import br.com.serverest.service.LoginService;
-import br.com.serverest.service.UsuarioService;
 import br.com.serverest.utils.DataFactory;
+import io.qameta.allure.*;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+@Epic("API ServeRest")
+@Feature("Segurança")
 public class SecurityTest extends BaseTest {
 
     private final LoginService loginService = new LoginService();
-    private final UsuarioService usuarioService = new UsuarioService();
-    private String userId;
-
-    @AfterEach
-    public void limparDados() {
-        if (userId != null) {
-            usuarioService.excluirUsuario(userId);
-        }
-    }
 
     @Test
     @DisplayName("Validar formato do token JWT retornado no login")
+    @Description("Valida que o token JWT retornado possui o formato correto com 3 partes: header.payload.signature")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Validação de Token JWT")
     public void testValidarFormatoTokenJWT() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(true);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
+        Usuario usuario = criarUsuarioERetornarObjeto(true);
 
         // Realizar login
         Login login = DataFactory.criarLoginValido(usuario);
@@ -107,11 +100,7 @@ public class SecurityTest extends BaseTest {
                 .administrador("true")
                 .build();
 
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
-
-        cadastroResponse.then()
-                .statusCode(201);
+        criarUsuarioCustomizadoERetornarId(usuario);
 
         // Realizar login com a senha especial
         Login login = Login.builder()
@@ -132,9 +121,7 @@ public class SecurityTest extends BaseTest {
     @DisplayName("Validar que token é único para cada login")
     public void testTokenUnicoParaCadaLogin() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(true);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
+        Usuario usuario = criarUsuarioERetornarObjeto(true);
 
         Login login = DataFactory.criarLoginValido(usuario);
 
@@ -192,9 +179,7 @@ public class SecurityTest extends BaseTest {
     @DisplayName("Validar estrutura do payload do token JWT")
     public void testValidarPayloadToken() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(true);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
+        Usuario usuario = criarUsuarioERetornarObjeto(true);
 
         // Realizar login
         Login login = DataFactory.criarLoginValido(usuario);
@@ -242,11 +227,7 @@ public class SecurityTest extends BaseTest {
                 .administrador("false")
                 .build();
 
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
-
-        cadastroResponse.then()
-                .statusCode(201);
+        criarUsuarioCustomizadoERetornarId(usuario);
 
         // Realizar login
         Login login = Login.builder()
@@ -278,11 +259,7 @@ public class SecurityTest extends BaseTest {
                 .administrador("false")
                 .build();
 
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        userId = cadastroResponse.jsonPath().getString("_id");
-
-        cadastroResponse.then()
-                .statusCode(201);
+        criarUsuarioCustomizadoERetornarId(usuario);
 
         // Realizar login
         Login login = Login.builder()

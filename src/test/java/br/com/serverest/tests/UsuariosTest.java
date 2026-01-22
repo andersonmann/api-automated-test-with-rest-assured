@@ -4,106 +4,137 @@ import br.com.serverest.config.BaseTest;
 import br.com.serverest.model.Usuario;
 import br.com.serverest.service.UsuarioService;
 import br.com.serverest.utils.DataFactory;
+import io.qameta.allure.*;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
+@Epic("API ServeRest")
+@Feature("Gerenciamento de Usuários")
 public class UsuariosTest extends BaseTest {
-    
+
     private final UsuarioService usuarioService = new UsuarioService();
-    
+
     @Test
     @DisplayName("Deve listar todos os usuários cadastrados")
+    @Description("Verifica se a API retorna a lista de todos os usuários cadastrados com sucesso")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Listagem de Usuários")
     public void testListarUsuarios() {
-        Response response = usuarioService.listarUsuarios();        
+        Response response = usuarioService.listarUsuarios();
         response.then()
                 .statusCode(200)
                 .body("usuarios", notNullValue())
                 .body("quantidade", greaterThanOrEqualTo(0));
+        
+        // Usando método helper para contar usuários
+        int totalUsuarios = usuarioService.contarUsuarios();
+        anexarLog("Total de usuários cadastrados: " + totalUsuarios);
     }
-    
+
     @Test
     @DisplayName("Deve cadastrar um novo usuário com sucesso")
+    @Description("Valida o cadastro de um novo usuário com todos os campos válidos")
+    @Severity(SeverityLevel.BLOCKER)
+    @Story("Cadastro de Usuários")
     public void testCadastrarUsuario() {
-        Usuario usuario = DataFactory.criarUsuarioValido(true);        
-        Response response = usuarioService.cadastrarUsuario(usuario);        
-        response.then()
-                .statusCode(201)
-                .body("message", equalTo("Cadastro realizado com sucesso"))
-                .body("_id", notNullValue());
+        Usuario usuario = DataFactory.criarUsuarioValido(true);
+
+        // Anexar dados de teste
+        anexarDadosDeTeste("Dados do Usuário Criado", usuario);
+
+        // Usando método helper cadastrarUsuarioERetornarId
+        String userId = usuarioService.cadastrarUsuarioERetornarId(usuario);
+        assertThat(userId).isNotEmpty();
+
+        anexarLog("Usuário cadastrado com sucesso. ID: " + userId);
         
-        String userId = response.jsonPath().getString("_id");
-        assertThat(userId).isNotEmpty();        
-        // Limpar - excluir o usuário criado
-        usuarioService.excluirUsuario(userId);
+        // Adicionar à lista de limpeza
+        usuariosParaLimpar.add(userId);
     }
-    
+
     @Test
     @DisplayName("Não deve cadastrar usuário com email duplicado")
+    @Description("Valida que a API impede o cadastro de usuários com email já existente")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Cadastro de Usuários")
     public void testCadastrarUsuarioComEmailDuplicado() {
-        Usuario usuario = DataFactory.criarUsuarioValido(false);        
+        Usuario usuario = DataFactory.criarUsuarioValido(false);
         // Primeiro cadastro
-        Response response1 = usuarioService.cadastrarUsuario(usuario);
-        String userId = response1.jsonPath().getString("_id");        
+        String userId = criarUsuarioCustomizadoERetornarId(usuario);
+
+        anexarDadosDeTeste("Usuário Duplicado (Tentativa)", usuario);
+        
+        // Verificar se usuário existe usando método helper
+        anexarLog("Usuário existe? " + usuarioService.usuarioExistePorEmail(usuario.getEmail()));
+
         // Segundo cadastro com mesmo email
-        Response response2 = usuarioService.cadastrarUsuario(usuario);        
-        response2.then()
-                .statusCode(400)
-                .body("message", equalTo("Este email já está sendo usado"));        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        Response response2 = usuarioService.cadastrarUsuario(usuario);
+
+        anexarResponse(response2);
+
+        validarRespostaErro400(response2, "message", "Este email já está sendo usado");
+
+        anexarLog("Validação de email duplicado funcionou corretamente");
     }
-    
+
     @Test
     @DisplayName("Deve buscar usuário por ID")
+    @Description("Valida a busca de um usuário específico pelo seu ID")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Busca de Usuários")
     public void testBuscarUsuarioPorId() {
         // Criar usuário
         Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");        
+        String userId = criarUsuarioCustomizadoERetornarId(usuario);
+
+        anexarTexto("User ID", userId);
+
         // Buscar usuário
-        Response response = usuarioService.buscarUsuarioPorId(userId);        
+        Response response = usuarioService.buscarUsuarioPorId(userId);
+
+        anexarResponse(response);
+
         response.then()
                 .statusCode(200)
                 .body("_id", equalTo(userId))
                 .body("nome", equalTo(usuario.getNome()))
-                .body("email", equalTo(usuario.getEmail()));        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+                .body("email", equalTo(usuario.getEmail()));
+
+        anexarComparacao(
+                String.format("Nome: %s\nEmail: %s", usuario.getNome(), usuario.getEmail()),
+                String.format("Nome: %s\nEmail: %s",
+                        response.jsonPath().getString("nome"),
+                        response.jsonPath().getString("email")));
     }
-    
+
     @Test
     @DisplayName("Deve excluir um usuário")
     public void testExcluirUsuario() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");        
+        String userId = criarUsuarioERetornarId(false);
+
         // Excluir usuário
-        Response response = usuarioService.excluirUsuario(userId);        
-        response.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro excluído com sucesso"));
+        Response response = usuarioService.excluirUsuario(userId);
+        validarRespostaOperacaoSucesso(response, "Registro excluído com sucesso");
     }
-    
+
     @Test
     @DisplayName("Deve editar um usuário existente")
     public void testEditarUsuario() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");        
+        String userId = criarUsuarioERetornarId(false);
+
         // Editar usuário
         Usuario usuarioEditado = DataFactory.criarUsuarioValido(false);
-        Response response = usuarioService.editarUsuario(userId, usuarioEditado);        
-        response.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro alterado com sucesso"));        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        Response response = usuarioService.editarUsuario(userId, usuarioEditado);
+        validarRespostaOperacaoSucesso(response, "Registro alterado com sucesso");
     }
 
     // ==================== VALIDAÇÕES DE CAMPOS ====================
@@ -117,7 +148,7 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("true")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         response.then()
                 .statusCode(400)
@@ -132,7 +163,7 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("true")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         response.then()
                 .statusCode(400)
@@ -148,11 +179,106 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         response.then()
                 .statusCode(400)
                 .body("email", equalTo("email deve ser um email válido"));
+    }
+
+    @ParameterizedTest(name = "Email inválido: {0}")
+    @DisplayName("Não deve cadastrar usuário com email em formato inválido")
+    @Description("Valida diversos formatos inválidos de email usando testes parametrizados")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Validações de Cadastro")
+    @ValueSource(strings = {
+        "emailinvalido",
+        "email@",
+        "@dominio.com",
+        "email@@dominio.com",
+        "email..teste@dominio.com"
+    })
+    public void testCadastrarUsuarioComEmailInvalido(String emailInvalido) {
+        Usuario usuario = Usuario.builder()
+                .nome(DataFactory.gerarNomeAleatorio())
+                .email(emailInvalido)
+                .password("senha123")
+                .administrador("false")
+                .build();
+
+        anexarDadosDeTeste("Usuário com email inválido: " + emailInvalido, usuario);
+
+        Response response = usuarioService.cadastrarUsuario(usuario);
+
+        anexarResponse(response);
+
+        response.then()
+                .statusCode(400)
+                .body("email", equalTo("email deve ser um email válido"));
+    }
+
+    @ParameterizedTest(name = "Campo obrigatório: {0}")
+    @DisplayName("Não deve cadastrar usuário sem campos obrigatórios")
+    @Description("Valida que todos os campos obrigatórios são validados usando testes parametrizados")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Validações de Cadastro")
+    @CsvSource({
+        "nome, nome é obrigatório",
+        "email, email é obrigatório",
+        "password, password é obrigatório",
+        "administrador, administrador é obrigatório"
+    })
+    public void testCadastrarUsuarioSemCampoObrigatorio(String campo, String mensagemEsperada) {
+        Usuario.UsuarioBuilder builder = Usuario.builder();
+
+        // Preencher todos os campos exceto o que está sendo testado
+        if (!campo.equals("nome")) builder.nome(DataFactory.gerarNomeAleatorio());
+        if (!campo.equals("email")) builder.email(DataFactory.gerarEmailAleatorio());
+        if (!campo.equals("password")) builder.password("senha123");
+        if (!campo.equals("administrador")) builder.administrador("false");
+
+        Usuario usuario = builder.build();
+
+        anexarDadosDeTeste("Usuário sem campo: " + campo, usuario);
+
+        Response response = usuarioService.cadastrarUsuario(usuario);
+
+        anexarResponse(response);
+
+        validarRespostaErro400(response, campo, mensagemEsperada);
+    }
+
+    @ParameterizedTest(name = "Campo vazio: {0}")
+    @DisplayName("Não deve cadastrar usuário com campos vazios")
+    @Description("Valida que campos não podem ficar em branco usando testes parametrizados")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Validações de Cadastro")
+    @CsvSource({
+        "nome, nome não pode ficar em branco",
+        "email, email não pode ficar em branco",
+        "password, password não pode ficar em branco"
+    })
+    public void testCadastrarUsuarioComCampoVazio(String campo, String mensagemEsperada) {
+        Usuario.UsuarioBuilder builder = Usuario.builder()
+                .nome(DataFactory.gerarNomeAleatorio())
+                .email(DataFactory.gerarEmailAleatorio())
+                .password("senha123")
+                .administrador("false");
+
+        // Definir o campo sendo testado como vazio
+        if (campo.equals("nome")) builder.nome("");
+        if (campo.equals("email")) builder.email("");
+        if (campo.equals("password")) builder.password("");
+
+        Usuario usuario = builder.build();
+
+        anexarDadosDeTeste("Usuário com campo vazio: " + campo, usuario);
+
+        Response response = usuarioService.cadastrarUsuario(usuario);
+
+        anexarResponse(response);
+
+        validarRespostaErro400(response, campo, mensagemEsperada);
     }
 
     @Test
@@ -164,7 +290,7 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         response.then()
                 .statusCode(400)
@@ -180,15 +306,14 @@ public class UsuariosTest extends BaseTest {
                 .password("12")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         // A API ServeRest não valida tamanho mínimo de senha
         response.then()
                 .statusCode(anyOf(equalTo(201), equalTo(400)));
-        
+
         if (response.statusCode() == 201) {
-            String userId = response.jsonPath().getString("_id");
-            usuarioService.excluirUsuario(userId);
+            usuariosParaLimpar.add(extrairIdDaResposta(response));
         }
     }
 
@@ -201,11 +326,9 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("sim")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
-        response.then()
-                .statusCode(400)
-                .body("administrador", equalTo("administrador deve ser 'true' ou 'false'"));
+        validarRespostaErro400(response, "administrador", "administrador deve ser 'true' ou 'false'");
     }
 
     @Test
@@ -216,11 +339,9 @@ public class UsuariosTest extends BaseTest {
                 .email(DataFactory.gerarEmailAleatorio())
                 .password("senha123")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
-        response.then()
-                .statusCode(400)
-                .body("administrador", equalTo("administrador é obrigatório"));
+        validarRespostaErro400(response, "administrador", "administrador é obrigatório");
     }
 
     @Test
@@ -232,15 +353,14 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         // API pode aceitar ou rejeitar caracteres especiais
         response.then()
                 .statusCode(anyOf(equalTo(201), equalTo(400)));
-        
+
         if (response.statusCode() == 201) {
-            String userId = response.jsonPath().getString("_id");
-            usuarioService.excluirUsuario(userId);
+            usuariosParaLimpar.add(extrairIdDaResposta(response));
         }
     }
 
@@ -253,7 +373,7 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         response.then()
                 .statusCode(400)
@@ -268,7 +388,7 @@ public class UsuariosTest extends BaseTest {
         Response response = usuarioService.buscarUsuarioPorId("id_invalido_123");
         response.then()
                 .statusCode(400);
-        
+
         // Verificar se há mensagem de erro
         String responseBody = response.asString();
         assert responseBody != null && !responseBody.isEmpty() : "Resposta não deve ser vazia";
@@ -280,15 +400,15 @@ public class UsuariosTest extends BaseTest {
         Response response = usuarioService.buscarUsuarioPorId("123456789012345678901234");
         response.then()
                 .statusCode(400);
-        
+
         // Verificar se há mensagem de erro
         String responseBody = response.asString();
         assert responseBody != null && !responseBody.isEmpty() : "Resposta não deve ser vazia";
     }
 
     @Test
-    @DisplayName("Deve listar usuários com filtro por nome")
-    public void testListarUsuariosComFiltroPorNome() {
+    @DisplayName("Deve buscar usuário por nome")
+    public void testBuscarUsuarioPorNome() {
         // Criar usuário com nome específico
         Usuario usuario = Usuario.builder()
                 .nome("João Teste Filtro")
@@ -296,72 +416,64 @@ public class UsuariosTest extends BaseTest {
                 .password("senha123")
                 .administrador("false")
                 .build();
-        
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
-        // Listar com filtro
-        Response response = usuarioService.listarUsuarios();
+
+        criarUsuarioCustomizadoERetornarId(usuario);
+
+        // Buscar por nome usando método helper
+        Response response = usuarioService.buscarUsuarioPorNome("João Teste Filtro");
         response.then()
                 .statusCode(200)
-                .body("usuarios", notNullValue());
+                .body("usuarios[0].nome", equalTo("João Teste Filtro"));
         
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        anexarLog("Usuário encontrado por nome: João Teste Filtro");
     }
 
     @Test
-    @DisplayName("Deve listar usuários com filtro por email")
-    public void testListarUsuariosComFiltroPorEmail() {
+    @DisplayName("Deve buscar usuário por email")
+    public void testBuscarUsuarioPorEmail() {
         // Criar usuário
         Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
-        // Listar todos
-        Response response = usuarioService.listarUsuarios();
+        criarUsuarioCustomizadoERetornarId(usuario);
+
+        // Buscar por email usando método helper
+        Response response = usuarioService.buscarUsuarioPorEmail(usuario.getEmail());
         response.then()
                 .statusCode(200)
-                .body("usuarios", notNullValue());
+                .body("usuarios[0].email", equalTo(usuario.getEmail()));
         
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        anexarLog("Usuário encontrado por email: " + usuario.getEmail());
     }
 
     @Test
     @DisplayName("Deve listar apenas usuários administradores")
     public void testListarUsuariosAdministradores() {
         // Criar usuário admin
-        Usuario usuarioAdmin = DataFactory.criarUsuarioValido(true);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuarioAdmin);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
-        // Listar usuários
-        Response response = usuarioService.listarUsuarios();
+        criarUsuarioERetornarId(true);
+
+        // Listar apenas administradores usando método helper
+        Response response = usuarioService.listarAdministradores();
         response.then()
                 .statusCode(200)
-                .body("usuarios", notNullValue());
+                .body("usuarios", notNullValue())
+                .body("usuarios.findAll { it.administrador == 'true' }.size()", greaterThanOrEqualTo(1));
         
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        anexarLog("Administradores listados com sucesso");
     }
 
     @Test
     @DisplayName("Deve listar apenas usuários não administradores")
     public void testListarUsuariosNaoAdministradores() {
         // Criar usuário não admin
-        Usuario usuarioNaoAdmin = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuarioNaoAdmin);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
-        // Listar usuários
-        Response response = usuarioService.listarUsuarios();
+        criarUsuarioERetornarId(false);
+
+        // Listar apenas usuários comuns usando método helper
+        Response response = usuarioService.listarUsuariosComuns();
         response.then()
                 .statusCode(200)
-                .body("usuarios", notNullValue());
+                .body("usuarios", notNullValue())
+                .body("usuarios.findAll { it.administrador == 'false' }.size()", greaterThanOrEqualTo(1));
         
-        // Limpar
-        usuarioService.excluirUsuario(userId);
+        anexarLog("Usuários comuns listados com sucesso");
     }
 
     // ==================== TESTES DE EDIÇÃO ====================
@@ -371,14 +483,12 @@ public class UsuariosTest extends BaseTest {
     public void testEditarUsuarioParaEmailExistente() {
         // Criar primeiro usuário
         Usuario usuario1 = DataFactory.criarUsuarioValido(false);
-        Response response1 = usuarioService.cadastrarUsuario(usuario1);
-        String userId1 = response1.jsonPath().getString("_id");
-        
+        String userId1 = criarUsuarioCustomizadoERetornarId(usuario1);
+
         // Criar segundo usuário
         Usuario usuario2 = DataFactory.criarUsuarioValido(false);
-        Response response2 = usuarioService.cadastrarUsuario(usuario2);
-        String userId2 = response2.jsonPath().getString("_id");
-        
+        String userId2 = criarUsuarioCustomizadoERetornarId(usuario2);
+
         // Tentar editar usuario2 com o email do usuario1
         Usuario usuarioEditado = Usuario.builder()
                 .nome(usuario2.getNome())
@@ -386,15 +496,9 @@ public class UsuariosTest extends BaseTest {
                 .password(usuario2.getPassword())
                 .administrador(usuario2.getAdministrador())
                 .build();
-        
+
         Response response = usuarioService.editarUsuario(userId2, usuarioEditado);
-        response.then()
-                .statusCode(400)
-                .body("message", equalTo("Este email já está sendo usado"));
-        
-        // Limpar
-        usuarioService.excluirUsuario(userId1);
-        usuarioService.excluirUsuario(userId2);
+        validarRespostaErro400(response, "message", "Este email já está sendo usado");
     }
 
     @Test
@@ -402,14 +506,11 @@ public class UsuariosTest extends BaseTest {
     public void testEditarUsuarioComIdInexistente() {
         Usuario usuario = DataFactory.criarUsuarioValido(false);
         Response response = usuarioService.editarUsuario("123456789012345678901234", usuario);
-        
+
         // PUT com ID inexistente cria novo usuário na API ServeRest
-        response.then()
-                .statusCode(201)
-                .body("message", equalTo("Cadastro realizado com sucesso"));
-        
-        String userId = response.jsonPath().getString("_id");
-        usuarioService.excluirUsuario(userId);
+        validarRespostaCadastroSucesso(response);
+
+        usuariosParaLimpar.add(extrairIdDaResposta(response));
     }
 
     @Test
@@ -417,9 +518,8 @@ public class UsuariosTest extends BaseTest {
     public void testEditarApenasNomeDoUsuario() {
         // Criar usuário
         Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
+        String userId = criarUsuarioCustomizadoERetornarId(usuario);
+
         // Editar apenas o nome
         Usuario usuarioEditado = Usuario.builder()
                 .nome("Nome Editado")
@@ -427,19 +527,14 @@ public class UsuariosTest extends BaseTest {
                 .password(usuario.getPassword())
                 .administrador(usuario.getAdministrador())
                 .build();
-        
+
         Response response = usuarioService.editarUsuario(userId, usuarioEditado);
-        response.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro alterado com sucesso"));
-        
+        validarRespostaOperacaoSucesso(response, "Registro alterado com sucesso");
+
         // Verificar se o nome foi alterado
         Response buscaResponse = usuarioService.buscarUsuarioPorId(userId);
         buscaResponse.then()
                 .body("nome", equalTo("Nome Editado"));
-        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
     }
 
     @Test
@@ -447,9 +542,8 @@ public class UsuariosTest extends BaseTest {
     public void testEditarApenasEmailDoUsuario() {
         // Criar usuário
         Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
+        String userId = criarUsuarioCustomizadoERetornarId(usuario);
+
         // Editar apenas o email
         String novoEmail = DataFactory.gerarEmailAleatorio();
         Usuario usuarioEditado = Usuario.builder()
@@ -458,19 +552,14 @@ public class UsuariosTest extends BaseTest {
                 .password(usuario.getPassword())
                 .administrador(usuario.getAdministrador())
                 .build();
-        
+
         Response response = usuarioService.editarUsuario(userId, usuarioEditado);
-        response.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro alterado com sucesso"));
-        
+        validarRespostaOperacaoSucesso(response, "Registro alterado com sucesso");
+
         // Verificar se o email foi alterado
         Response buscaResponse = usuarioService.buscarUsuarioPorId(userId);
         buscaResponse.then()
                 .body("email", equalTo(novoEmail));
-        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
     }
 
     @Test
@@ -478,9 +567,8 @@ public class UsuariosTest extends BaseTest {
     public void testEditarStatusAdministrador() {
         // Criar usuário não administrador
         Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
+        String userId = criarUsuarioCustomizadoERetornarId(usuario);
+
         // Editar para administrador
         Usuario usuarioEditado = Usuario.builder()
                 .nome(usuario.getNome())
@@ -488,19 +576,14 @@ public class UsuariosTest extends BaseTest {
                 .password(usuario.getPassword())
                 .administrador("true")
                 .build();
-        
+
         Response response = usuarioService.editarUsuario(userId, usuarioEditado);
-        response.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro alterado com sucesso"));
-        
+        validarRespostaOperacaoSucesso(response, "Registro alterado com sucesso");
+
         // Verificar se o status foi alterado
         Response buscaResponse = usuarioService.buscarUsuarioPorId(userId);
         buscaResponse.then()
                 .body("administrador", equalTo("true"));
-        
-        // Limpar
-        usuarioService.excluirUsuario(userId);
     }
 
     // ==================== TESTES DE EXCLUSÃO ====================
@@ -527,16 +610,12 @@ public class UsuariosTest extends BaseTest {
     @DisplayName("Excluir e verificar que usuário foi realmente removido")
     public void testExcluirEVerificarRemocao() {
         // Criar usuário
-        Usuario usuario = DataFactory.criarUsuarioValido(false);
-        Response cadastroResponse = usuarioService.cadastrarUsuario(usuario);
-        String userId = cadastroResponse.jsonPath().getString("_id");
-        
+        String userId = criarUsuarioERetornarId(false);
+
         // Excluir usuário
         Response deleteResponse = usuarioService.excluirUsuario(userId);
-        deleteResponse.then()
-                .statusCode(200)
-                .body("message", equalTo("Registro excluído com sucesso"));
-        
+        validarRespostaOperacaoSucesso(deleteResponse, "Registro excluído com sucesso");
+
         // Verificar que o usuário não existe mais
         Response buscaResponse = usuarioService.buscarUsuarioPorId(userId);
         buscaResponse.then()
@@ -554,27 +633,26 @@ public class UsuariosTest extends BaseTest {
         for (int i = 0; i < 500; i++) {
             nomeLongo.append("a");
         }
-        
+
         StringBuilder senhaLonga = new StringBuilder();
         for (int i = 0; i < 500; i++) {
             senhaLonga.append("b");
         }
-        
+
         Usuario usuario = Usuario.builder()
                 .nome(nomeLongo.toString())
                 .email(DataFactory.gerarEmailAleatorio())
                 .password(senhaLonga.toString())
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         // API pode aceitar ou rejeitar campos muito longos
         response.then()
                 .statusCode(anyOf(equalTo(201), equalTo(400)));
-        
+
         if (response.statusCode() == 201) {
-            String userId = response.jsonPath().getString("_id");
-            usuarioService.excluirUsuario(userId);
+            usuariosParaLimpar.add(extrairIdDaResposta(response));
         }
     }
 
@@ -587,15 +665,14 @@ public class UsuariosTest extends BaseTest {
                 .password("' OR '1'='1")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         // API deve proteger contra SQL Injection
         response.then()
                 .statusCode(anyOf(equalTo(201), equalTo(400)));
-        
+
         if (response.statusCode() == 201) {
-            String userId = response.jsonPath().getString("_id");
-            usuarioService.excluirUsuario(userId);
+            usuariosParaLimpar.add(extrairIdDaResposta(response));
         }
     }
 
@@ -608,21 +685,21 @@ public class UsuariosTest extends BaseTest {
                 .password("<img src=x onerror=alert('XSS')>")
                 .administrador("false")
                 .build();
-        
+
         Response response = usuarioService.cadastrarUsuario(usuario);
         // API deve proteger contra XSS
         response.then()
                 .statusCode(anyOf(equalTo(201), equalTo(400)));
-        
+
         if (response.statusCode() == 201) {
-            String userId = response.jsonPath().getString("_id");
-            
+            String userId = extrairIdDaResposta(response);
+
             // Verificar se o conteúdo foi sanitizado
             Response buscaResponse = usuarioService.buscarUsuarioPorId(userId);
             buscaResponse.then()
                     .statusCode(200);
-            
-            usuarioService.excluirUsuario(userId);
+
+            usuariosParaLimpar.add(userId);
         }
     }
 }

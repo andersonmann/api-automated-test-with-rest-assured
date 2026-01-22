@@ -4,133 +4,182 @@ import br.com.serverest.config.BaseTest;
 import br.com.serverest.model.Login;
 import br.com.serverest.model.Usuario;
 import br.com.serverest.service.LoginService;
-import br.com.serverest.service.UsuarioService;
 import br.com.serverest.utils.DataFactory;
+import io.qameta.allure.*;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.hamcrest.Matchers.*;
 
+@Epic("API ServeRest")
+@Feature("Autenticação")
 public class LoginTest extends BaseTest {
 
     private final LoginService loginService = new LoginService();
-    private final UsuarioService usuarioService = new UsuarioService();
-    private String userId;
     private Usuario usuarioCriado;
 
     @BeforeEach
     public void criarUsuarioParaTeste() {
-        usuarioCriado = DataFactory.criarUsuarioValido(true);
-        Response response = usuarioService.cadastrarUsuario(usuarioCriado);
-        userId = response.jsonPath().getString("_id");
-    }
-
-    @AfterEach
-    public void limparDados() {
-        if (userId != null) {
-            usuarioService.excluirUsuario(userId);
-        }
+        usuarioCriado = criarUsuarioERetornarObjeto(true);
     }
 
     @Test
     @DisplayName("Deve realizar login com sucesso")
+    @Description("Valida que um usuário com credenciais válidas consegue realizar login e recebe um token JWT")
+    @Severity(SeverityLevel.BLOCKER)
+    @Story("Login - Casos de Sucesso")
     public void testLoginComSucesso() {
         Login login = DataFactory.criarLoginValido(usuarioCriado);
+        
+        anexarDadosDeTeste("Credenciais de Login", login);
+        
         Response response = loginService.realizarLogin(login);
+        
+        anexarResponse(response);
+        
+        // Usando método helper para extrair token limpo
+        String token = loginService.extrairTokenLimpo(response);
+        anexarTexto("Token JWT", token);
+        
         response.then()
                 .statusCode(200)
                 .body("message", equalTo("Login realizado com sucesso"))
                 .body("authorization", notNullValue())
                 .body("authorization", startsWith("Bearer "));
+        
+        // Usando método helper para validar sucesso
+        anexarLog("Login realizado com sucesso: " + loginService.loginFoiSucesso(response));
     }
 
     @Test
     @DisplayName("Não deve realizar login com email inválido")
+    @Description("Valida que a API rejeita login com email não cadastrado")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Login - Casos de Erro")
     public void testLoginComEmailInvalido() {
-        Login login = Login.builder()
-                .email("email.invalido@teste.com")
-                .password(usuarioCriado.getPassword())
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(401)
-                .body("message", equalTo("Email e/ou senha inválidos"));
+        // Usando método helper sobrecarga com email e senha
+        Response response = loginService.realizarLogin("email.invalido@teste.com", usuarioCriado.getPassword());
+        
+        anexarDadosDeTeste("Email Inválido", "email.invalido@teste.com");
+        anexarResponse(response);
+        
+        validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 
     @Test
     @DisplayName("Não deve realizar login com senha inválida")
+    @Description("Valida que a API rejeita login com senha incorreta")
+    @Severity(SeverityLevel.CRITICAL)
+    @Story("Login - Casos de Erro")
     public void testLoginComSenhaInvalida() {
-        Login login = Login.builder()
-                .email(usuarioCriado.getEmail())
-                .password("senhaerrada123")
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(401)
-                .body("message", equalTo("Email e/ou senha inválidos"));
+        // Usando método helper sobrecarga com email e senha
+        Response response = loginService.realizarLogin(usuarioCriado.getEmail(), "senhaerrada123");
+        
+        anexarDadosDeTeste("Senha Inválida", "senhaerrada123");
+        anexarResponse(response);
+        
+        validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 
-    @Test
-    @DisplayName("Não deve realizar login sem informar email")
-    public void testLoginSemEmail() {
+    @ParameterizedTest(name = "Validação de email vazio/inválido: {0}")
+    @DisplayName("Não deve realizar login com email em formato inválido")
+    @Description("Valida que a API valida o formato do email usando testes parametrizados")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Login - Validações de Campo")
+    @CsvSource({
+        "emailinvalido, email deve ser um email válido",
+        "'  email@teste.com  ', email deve ser um email válido"
+    })
+    public void testLoginComEmailInvalido(String email, String mensagemEsperada) {
         Login login = Login.builder()
+                .email(email)
                 .password(usuarioCriado.getPassword())
                 .build();
+        
+        anexarDadosDeTeste("Login com Email Inválido: " + email, login);
+        
         Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("email", equalTo("email é obrigatório"));
+        
+        anexarResponse(response);
+        
+        validarRespostaErro400(response, "email", mensagemEsperada);
     }
 
-    @Test
-    @DisplayName("Não deve realizar login sem informar senha")
-    public void testLoginSemSenha() {
-        Login login = Login.builder()
-                .email(usuarioCriado.getEmail())
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("password", equalTo("password é obrigatório"));
+    @ParameterizedTest(name = "Campo obrigatório: {0}")
+    @DisplayName("Não deve realizar login sem campos obrigatórios")
+    @Description("Valida que a API requer os campos obrigatórios usando testes parametrizados")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Login - Validações de Campo")
+    @CsvSource({
+        "email, email é obrigatório",
+        "password, password é obrigatório"
+    })
+    public void testLoginCamposObrigatorios(String campo, String mensagem) {
+        Response response;
+        
+        // Usando métodos helper específicos do LoginService
+        if (campo.equals("email")) {
+            response = loginService.realizarLoginSemEmail(usuarioCriado.getPassword());
+        } else {
+            response = loginService.realizarLoginSemSenha(usuarioCriado.getEmail());
+        }
+        
+        anexarDadosDeTeste("Login sem campo: " + campo, "Campo " + campo + " omitido");
+        anexarResponse(response);
+        
+        validarRespostaErro400(response, campo, mensagem);
     }
 
-    @Test
-    @DisplayName("Não deve realizar login com email vazio")
-    public void testLoginComEmailVazio() {
-        Login login = Login.builder()
-                .email("")
-                .password(usuarioCriado.getPassword())
-                .build();
+    @ParameterizedTest(name = "Campo vazio: {0}")
+    @DisplayName("Não deve realizar login com campos vazios")
+    @Description("Valida que a API não aceita campos em branco usando testes parametrizados")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Login - Validações de Campo")
+    @CsvSource({
+        "email, email não pode ficar em branco",
+        "password, password não pode ficar em branco"
+    })
+    public void testLoginCamposVazios(String campo, String mensagem) {
+        Login login;
+        
+        if (campo.equals("email")) {
+            login = Login.builder()
+                    .email("")
+                    .password(usuarioCriado.getPassword())
+                    .build();
+        } else {
+            login = Login.builder()
+                    .email(usuarioCriado.getEmail())
+                    .password("")
+                    .build();
+        }
+        
+        anexarDadosDeTeste("Login com campo vazio: " + campo, login);
+        
         Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("email", equalTo("email não pode ficar em branco"));
-    }
-
-    @Test
-    @DisplayName("Não deve realizar login com senha vazia")
-    public void testLoginComSenhaVazia() {
-        Login login = Login.builder()
-                .email(usuarioCriado.getEmail())
-                .password("")
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("password", equalTo("password não pode ficar em branco"));
+        
+        anexarResponse(response);
+        
+        validarRespostaErro400(response, campo, mensagem);
     }
 
     @Test
     @DisplayName("Não deve realizar login com ambos os campos vazios")
+    @Description("Valida que a API retorna erro para ambos os campos quando estão vazios")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Login - Validações de Campo")
     public void testLoginComCamposVazios() {
-        Login login = Login.builder()
-                .email("")
-                .password("")
-                .build();
-        Response response = loginService.realizarLogin(login);
+        // Usando método helper do LoginService
+        Response response = loginService.realizarLoginComCamposVazios();
+        
+        anexarDadosDeTeste("Login com Campos Vazios", "Email e senha vazios");
+        anexarResponse(response);
+        
         response.then()
                 .statusCode(400)
                 .body("email", equalTo("email não pode ficar em branco"))
@@ -138,41 +187,22 @@ public class LoginTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("Não deve realizar login com email em formato inválido")
-    public void testLoginComEmailFormatoInvalido() {
-        Login login = Login.builder()
-                .email("emailinvalido")
-                .password(usuarioCriado.getPassword())
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("email", equalTo("email deve ser um email válido"));
-    }
-
-    @Test
-    @DisplayName("Não deve realizar login com espaços no email")
-    public void testLoginComEspacosNoEmail() {
-        Login login = Login.builder()
-                .email("  " + usuarioCriado.getEmail() + "  ")
-                .password(usuarioCriado.getPassword())
-                .build();
-        Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(400)
-                .body("email", equalTo("email deve ser um email válido"));
-    }
-
-    @Test
     @DisplayName("Não deve realizar login com espaços na senha")
+    @Description("Valida que a API não aceita senha com espaços em branco")
+    @Severity(SeverityLevel.MINOR)
+    @Story("Login - Validações de Campo")
     public void testLoginComEspacosNaSenha() {
         Login login = Login.builder()
                 .email(usuarioCriado.getEmail())
                 .password("  " + usuarioCriado.getPassword() + "  ")
                 .build();
+        
+        anexarDadosDeTeste("Login com Espaços na Senha", login);
+        
         Response response = loginService.realizarLogin(login);
-        response.then()
-                .statusCode(401)
-                .body("message", equalTo("Email e/ou senha inválidos"));
+        
+        anexarResponse(response);
+        
+        validarRespostaErro401(response, "Email e/ou senha inválidos");
     }
 }
