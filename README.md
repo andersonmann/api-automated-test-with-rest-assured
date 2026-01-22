@@ -97,7 +97,7 @@ mvn test -Dtest=UsuariosTest#testCadastrarUsuario
 mvn allure:serve
 ```
 
-## � Executando a Pipeline no GitHub Actions
+## Executando a Pipeline no GitHub Actions
 
 ### Como executar manualmente:
 
@@ -112,24 +112,28 @@ mvn allure:serve
 
 ### Visualizando o relatório Allure:
 
-1. Após a execução da pipeline, role até o final da página
-2. Na seção **Artifacts**, localize **allure-report-html**
-3. Clique para fazer o download do arquivo ZIP
-4. Extraia o arquivo ZIP em seu computador
-5. Abra o arquivo `index.html` no seu navegador
+#### 📍 Opção 1: Acesso Direto via GitHub Pages (Recomendado)
+Após a execução da pipeline, o relatório é automaticamente publicado e pode ser acessado diretamente em:
 
-**Nota:** O relatório Allure fica disponível por 30 dias após a execução da pipeline.
+🔗 **https://andersonmann.github.io/api-automated-test-with-rest-assured/**
+
+Não é necessário fazer download ou instalação. Basta acessar o link no navegador!
+
+PS:Durante o desenvolvimento foi verificado que devido a restrições da API utilizada para os testes, alguns cenários podem falhar devido ao limite de requisições disponivíveis por minuto da API.
+
+**Artefatos disponíveis:**
+- `allure-report` - Relatório HTML completo (disponível por 30 dias)
 
 ### Status da Pipeline:
 
 A pipeline executa automaticamente as seguintes etapas:
 - ✅ Checkout do código
-- ✅ Setup do Java 11 com Maven cache
+- ✅ Setup do Java 21 com Maven cache
 - ✅ Execução dos testes (`mvn clean test`)
 - ✅ Geração do relatório Allure
 - ✅ Upload do relatório HTML como artefato
 
-## �📊 Cobertura de Testes
+## 📊 Cobertura de Testes
 
 | Classe de Teste | Testes | Descrição |
 |----------------|--------|-----------|
@@ -161,13 +165,6 @@ A pipeline executa automaticamente as seguintes etapas:
 - ✅ Validar campos vazios
 - ✅ Extrair e validar token JWT
 
-### Produtos (`/produtos`)
-- ✅ Listar produtos
-- ✅ Cadastrar produto (requer autenticação)
-- ✅ Buscar produto por ID
-- ✅ Editar produto (requer autenticação)
-- ✅ Excluir produto (requer autenticação)
-
 ### Contratos (JSON Schema)
 - ✅ Validação de schema de usuário
 - ✅ Validação de schema de lista de usuários
@@ -195,7 +192,6 @@ BaseService (abstract)
     ├── LoginService (extends BaseService)
     └── ProdutoService (extends BaseService)
 ```
-
 
 ### Builder Pattern
 Os modelos utilizam Lombok `@Builder` para criação fluente de objetos.
@@ -229,13 +225,6 @@ Este projeto foi desenvolvido seguindo as melhores práticas da documentação o
 - ✅ **Test Fixtures** - Setup/teardown automático
 - ✅ **Allure Reports** - Documentação visual dos testes
 
-## 🤝 Contribuindo
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/NovaFeature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/NovaFeature`)
-5. Abra um Pull Request
 
 ## 📄 Licença
 
