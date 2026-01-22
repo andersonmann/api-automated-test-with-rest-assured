@@ -97,7 +97,39 @@ mvn test -Dtest=UsuariosTest#testCadastrarUsuario
 mvn allure:serve
 ```
 
-## 📊 Cobertura de Testes
+## � Executando a Pipeline no GitHub Actions
+
+### Como executar manualmente:
+
+1. Acesse o repositório no GitHub
+2. Clique na aba **Actions**
+3. Selecione o workflow **Run API Tests** na barra lateral
+4. Clique no botão **Run workflow** (no lado direito)
+5. Selecione a branch desejada (ex: `main` ou `feature-aplicar-design-pattern`)
+6. Escolha a suíte de testes no dropdown:
+   - **all** - Executa todos os testes
+7. Clique em **Run workflow** (botão verde)
+
+### Visualizando o relatório Allure:
+
+1. Após a execução da pipeline, role até o final da página
+2. Na seção **Artifacts**, localize **allure-report-html**
+3. Clique para fazer o download do arquivo ZIP
+4. Extraia o arquivo ZIP em seu computador
+5. Abra o arquivo `index.html` no seu navegador
+
+**Nota:** O relatório Allure fica disponível por 30 dias após a execução da pipeline.
+
+### Status da Pipeline:
+
+A pipeline executa automaticamente as seguintes etapas:
+- ✅ Checkout do código
+- ✅ Setup do Java 11 com Maven cache
+- ✅ Execução dos testes (`mvn clean test`)
+- ✅ Geração do relatório Allure
+- ✅ Upload do relatório HTML como artefato
+
+## �📊 Cobertura de Testes
 
 | Classe de Teste | Testes | Descrição |
 |----------------|--------|-----------|
