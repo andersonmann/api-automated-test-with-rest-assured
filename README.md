@@ -1,56 +1,51 @@
 # Test API REST Assured - ServeRest
 
-Projeto de testes automatizados para a API [ServeRest](https://serverest.dev) utilizando RestAssured e Java, implementando design patterns e boas práticas de automação de testes.
+Testes automatizados para a API [ServeRest](https://serverest.dev) usando RestAssured e Java. O projeto usa alguns design patterns que ajudam a manter o código organizado e fácil de manter.
 
-## 📋 Pré-requisitos
+## Pré-requisitos
 
-- Java 11 ou superior
+- Java 21
 - Maven 3.6 ou superior
 
-## 🚀 Tecnologias Utilizadas
+## Tecnologias
 
-- **RestAssured 5.4.0** - Framework para testes de API REST
-- **JUnit 5.10.1** - Framework de testes
-- **Allure 2.25.0** - Geração de relatórios elegantes
-- **Jackson** - Serialização/Deserialização JSON
-- **Lombok** - Redução de código boilerplate
-- **AssertJ** - Assertions fluentes
-- **JavaFaker** - Geração de dados de teste
-- **JSON Schema Validator** - Validação de contratos de API
+- **RestAssured 5.4.0** - para testes de API REST
+- **JUnit 5.10.1** - framework de testes
+- **Allure 2.25.0** - geração de relatórios (fica bem visual)
+- **Jackson** - serialização/deserialização JSON
+- **Lombok** - reduz bastante código boilerplate
+- **AssertJ** - assertions mais legíveis
+- **JavaFaker** - gera dados de teste aleatórios
+- **JSON Schema Validator** - validação de contratos
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 test-api-rest-assured/
-├── src/
-│   └── test/
-│       ├── java/
-│       │   └── br/com/serverest/
-│       │       ├── config/
-│       │       │   └── BaseTest.java          # Configuração base dos testes
-│       │       ├── model/
-│       │       │   ├── Usuario.java           # Modelo de usuário
-│       │       │   ├── Login.java             # Modelo de login
-│       │       ├── service/
-│       │       │   ├── BaseService.java       # ⭐ Service Object abstrato
-│       │       │   ├── UsuarioService.java    # Serviço de usuários (16 métodos)
-│       │       │   ├── LoginService.java      # Serviço de login (10 métodos)
-│       │       ├── utils/
-│       │       │   └── DataFactory.java       # Factory para dados de teste
-│       │       └── tests/
-│       │           ├── UsuariosTest.java      # 44 testes de usuários
-│       │           ├── LoginTest.java         # 11 testes de login
-│       │           ├── ContratoTest.java      # 34 testes de contrato (JSON Schema)
-│       │           ├── SecurityTest.java      # 12 testes de segurança
-│       └── resources/
-│           ├── config.properties              # Configurações da API
-├── pom.xml
-└── README.md
+├── src/test/java/br/com/serverest/
+│   ├── config/
+│   │   └── BaseTest.java          # configuração base
+│   ├── model/
+│   │   ├── Usuario.java           
+│   │   └── Login.java             
+│   ├── service/
+│   │   ├── BaseService.java       # classe abstrata com funcionalidades comuns
+│   │   ├── UsuarioService.java    # 16 métodos
+│   │   └── LoginService.java      # 10 métodos
+│   ├── utils/
+│   │   └── DataFactory.java       # gerador de dados de teste
+│   └── tests/
+│       ├── UsuariosTest.java      # 44 testes
+│       ├── LoginTest.java         # 11 testes
+│       ├── ContratoTest.java      # 28 testes de schema
+│       └── SecurityTest.java      # 14 testes
+└── src/test/resources/
+    └── config.properties
 ```
 
-## ⚙️ Configuração
+## Configuração
 
-As configurações da API estão no arquivo `src/test/resources/config.properties`:
+O arquivo `config.properties` tem as configurações básicas:
 
 ```properties
 base.uri=https://serverest.dev
@@ -61,193 +56,153 @@ enable.request.logging=true
 enable.response.logging=true
 ```
 
-## 🔧 Instalação
+## Instalação
 
-1. Clone o repositório:
+Clone o repositório:
 ```bash
 git clone git@github.com:andersonmann/api-automated-test-with-rest-assured.git
 cd api-automated-test-with-rest-assured
-```
-
-2. Instale as dependências:
-```bash
 mvn clean install
 ```
 
-## ▶️ Executando os Testes
+## Rodando os Testes
 
-### Executar todos os testes:
+Todos os testes:
 ```bash
 mvn clean test
 ```
 
-### Executar uma classe de teste específica:
+Uma classe específica:
 ```bash
 mvn test -Dtest=UsuariosTest
-mvn test -Dtest=LoginTest
 ```
 
-### Executar um teste específico:
+Um teste específico:
 ```bash
 mvn test -Dtest=UsuariosTest#testCadastrarUsuario
 ```
 
-### Gerar relatório Allure:
+Relatório Allure:
 ```bash
 mvn allure:serve
 ```
 
-## � Executando a Pipeline no GitHub Actions
+## GitHub Actions
 
-### Como executar manualmente:
+Para rodar manualmente:
+1. Vá na aba Actions do repositório
+2. Selecione o workflow "Run API Tests"
+3. Clique em "Run workflow"
+4. Escolha a branch e clique no botão verde
 
-1. Acesse o repositório no GitHub
-2. Clique na aba **Actions**
-3. Selecione o workflow **Run API Tests** na barra lateral
-4. Clique no botão **Run workflow** (no lado direito)
-5. Selecione a branch desejada (ex: `main` ou `feature-aplicar-design-pattern`)
-6. Escolha a suíte de testes no dropdown:
-   - **all** - Executa todos os testes
-7. Clique em **Run workflow** (botão verde)
+### Relatório Allure
 
-### Visualizando o relatório Allure:
+O relatório fica publicado automaticamente no GitHub Pages:
 
-1. Após a execução da pipeline, role até o final da página
-2. Na seção **Artifacts**, localize **allure-report-html**
-3. Clique para fazer o download do arquivo ZIP
-4. Extraia o arquivo ZIP em seu computador
-5. Abra o arquivo `index.html` no seu navegador
+**https://andersonmann.github.io/api-automated-test-with-rest-assured/**
 
-**Nota:** O relatório Allure fica disponível por 30 dias após a execução da pipeline.
+> Observação: A API do ServeRest tem limite de requisições por minuto, então alguns testes podem falhar ocasionalmente por rate limit. É algo que notei durante os testes.
 
-### Status da Pipeline:
+O relatório também fica disponível como artefato do workflow por 30 dias.
 
-A pipeline executa automaticamente as seguintes etapas:
-- ✅ Checkout do código
-- ✅ Setup do Java 11 com Maven cache
-- ✅ Execução dos testes (`mvn clean test`)
-- ✅ Geração do relatório Allure
-- ✅ Upload do relatório HTML como artefato
+### Pipeline
 
-## �📊 Cobertura de Testes
+A pipeline basicamente faz:
+- Checkout do código
+- Setup do Java 21 com cache do Maven
+- Roda `mvn clean test`
+- Gera o relatório Allure
+- Faz upload do relatório
 
-| Classe de Teste | Testes | Descrição |
-|----------------|--------|-----------|
+## Cobertura de Testes
+
+| Classe | Testes | Descrição |
+|--------|--------|-----------|
 | **UsuariosTest** | 44 | CRUD, validações, filtros, segurança |
 | **LoginTest** | 11 | Autenticação, validações de campos |
 | **ContratoTest** | 28 | Validação de JSON Schema |
 | **SecurityTest** | 14 | Autenticação, autorização, SQL Injection, XSS |
 
-## 📝 Endpoints Testados
+## Endpoints Testados
 
 ### Usuários (`/usuarios`)
-- ✅ Listar usuários (com filtros)
-- ✅ Cadastrar usuário
-- ✅ Buscar usuário por ID
-- ✅ Buscar por email
-- ✅ Buscar por nome
-- ✅ Listar administradores
-- ✅ Listar usuários comuns
-- ✅ Editar usuário
-- ✅ Excluir usuário
-- ✅ Validações de campos (obrigatórios, vazios, formato)
-- ✅ Testes de segurança (SQL Injection, XSS)
+- Listar usuários com filtros
+- Cadastrar, buscar, editar e excluir
+- Busca por email e nome
+- Filtrar administradores e usuários comuns
+- Validações de campos obrigatórios e formatos
+- Testes de segurança (SQL Injection, XSS)
 
 ### Login (`/login`)
-- ✅ Realizar login com sucesso
-- ✅ Validar credenciais inválidas (email/senha)
-- ✅ Validar campos obrigatórios
-- ✅ Validar formato de email
-- ✅ Validar campos vazios
-- ✅ Extrair e validar token JWT
-
-### Produtos (`/produtos`)
-- ✅ Listar produtos
-- ✅ Cadastrar produto (requer autenticação)
-- ✅ Buscar produto por ID
-- ✅ Editar produto (requer autenticação)
-- ✅ Excluir produto (requer autenticação)
+- Login com credenciais válidas e inválidas
+- Validações de campos (obrigatórios, formato de email, vazios)
+- Extração e validação de token JWT
 
 ### Contratos (JSON Schema)
-- ✅ Validação de schema de usuário
-- ✅ Validação de schema de lista de usuários
-- ✅ Validação de schema de login
-- ✅ Validação de schema de produto
-- ✅ Validação de campos obrigatórios
-- ✅ Validação de tipos de dados
+Validação de schemas para:
+- Usuário (individual e lista)
+- Login
+- Campos obrigatórios e tipos de dados
 
 ### Segurança
-- ✅ Autenticação de endpoints protegidos
-- ✅ Autorização (admin vs usuário comum)
-- ✅ Proteção contra SQL Injection
-- ✅ Proteção contra XSS
-- ✅ Validação de tamanho de campos
+- Autenticação em endpoints protegidos
+- Autorização (diferença entre admin e usuário comum)
+- Proteção contra SQL Injection e XSS
+- Validação de tamanho de campos
 
-## 🎯 Padrões de Design Implementados
+## Design Patterns
 
-### ⭐ Service Object Pattern (Page Object Model para APIs)
-Implementação completa do padrão Service Object com classe base abstrata e serviços especializados.
+### Service Object Pattern
+O projeto usa Service Objects (parecido com Page Object para APIs). Tem uma classe base abstrata `BaseService` que os outros services estendem:
 
-**Arquitetura:**
 ```
 BaseService (abstract)
-    ├── UsuarioService (extends BaseService)
-    ├── LoginService (extends BaseService)
-    └── ProdutoService (extends BaseService)
+    ├── UsuarioService
+    ├── LoginService
 ```
 
+Isso ajuda bastante a não repetir código e deixa os testes mais limpos.
 
 ### Builder Pattern
-Os modelos utilizam Lombok `@Builder` para criação fluente de objetos.
+Os models usam `@Builder` do Lombok, então fica fácil criar objetos nos testes.
 
-### Data Factory Pattern
-A classe `DataFactory` centraliza a criação de dados de teste utilizando JavaFaker.
+### Data Factory
+`DataFactory` centraliza a criação de dados de teste com JavaFaker. Facilita quando precisa de vários usuários com dados diferentes.
 
-### Test Fixtures (BeforeEach/AfterEach)
-Gerenciamento automático de setup e cleanup de recursos de teste.
+### Test Fixtures
+Usando `@BeforeEach` e `@AfterEach` para setup e cleanup.
 
-## 📖 Documentação e Recursos
+## Referências
 
-### Documentação Externa
-Este projeto foi desenvolvido seguindo as melhores práticas da documentação oficial:
-- [RestAssured Documentation](https://rest-assured.io/)
-- [RestAssured Usage Guide](https://github.com/rest-assured/rest-assured/wiki/Usage)
-- [JUnit 5 User Guide](https://junit.org/junit5/docs/current/user-guide/)
+Documentação útil:
+- [RestAssured](https://rest-assured.io/)
+- [JUnit 5](https://junit.org/junit5/docs/current/user-guide/)
 - [Allure Report](https://docs.qameta.io/allure/)
 - [JSON Schema](https://json-schema.org/)
 
-## 🎓 Conceitos e Boas Práticas Aplicadas
+## Conceitos Aplicados
 
-- ✅ **Service Object Pattern** - Encapsulamento de requisições HTTP
-- ✅ **DRY (Don't Repeat Yourself)** - Métodos helper eliminam duplicação
-- ✅ **Single Responsibility** - Cada service tem uma responsabilidade clara
-- ✅ **Herança** - BaseService provê funcionalidades comuns
-- ✅ **Composição** - Services podem ser combinados em testes complexos
-- ✅ **Data-Driven Testing** - Testes parametrizados com JUnit
-- ✅ **Contract Testing** - Validação com JSON Schema
-- ✅ **Security Testing** - Testes de vulnerabilidades comuns
-- ✅ **Test Fixtures** - Setup/teardown automático
-- ✅ **Allure Reports** - Documentação visual dos testes
+**Service Object Pattern** - Encapsula as requisições HTTP, deixa os testes mais limpos
 
-## 🤝 Contribuindo
+**DRY** - Métodos helper evitam repetição de código
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/NovaFeature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/NovaFeature`)
-5. Abra um Pull Request
+**Single Responsibility** - Cada service cuida da sua parte
 
-## 📄 Licença
+**Herança** - BaseService tem funcionalidades que todos os services usam
 
-Este projeto está sob a licença MIT.
+**Data-Driven Testing** - Testes parametrizados com JUnit
 
-## ✨ Autor
+**Contract Testing** - Validação com JSON Schema
+
+**Security Testing** - Testa vulnerabilidades comuns (SQL Injection, XSS)
+
+
+## Licença
+
+MIT
+
+## Autor
+
 Anderson Mann (anderson.civil@hotmail.com)
 
-Desenvolvido para fins de estudo e aprendizado de testes de API com RestAssured.
-
-**Destaques do projeto:**
-- 📐 Service Object Pattern implementado com arquitetura extensível
-- 🔒 Testes de segurança (SQL Injection, XSS)
-- 📋 Validação de contratos com JSON Schema
-- 📈 Relatórios com Allure
+Projeto desenvolvido para estudar testes de API com RestAssured.
